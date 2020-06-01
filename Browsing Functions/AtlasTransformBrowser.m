@@ -515,7 +515,13 @@ switch key_letter
         end
         pointList.pointHands = ud.pointHands;
         warning('off', 'MATLAB:Figure:FigureSavedToMATFile');
-        save(fullfile(save_location, ['probe_points' save_suffix]), 'pointList'); disp('probe points saved');        
+        % Save a copy in a results folder
+        results_folder = 'D:\Dropbox (UCL - SWC)\Project_transcriptomics\analysis\PAG_registration\PAG_cells_to_register\processed\results';
+        save(fullfile(results_folder, ['probe_points' save_suffix]), 'pointList');
+        % Save in processed folder
+        save(fullfile(save_location, ['probe_points' save_suffix]), 'pointList'); disp('probe points saved');
+        disp(['current image       -     ' ud_slice.processed_image_names{ud.slice_at_shift_start + ud.slice_shift}(1:end-4)]);
+        disp(['saved image name    -     ' pointList.pointList{ud.currentProbe,3}{end}]);
 % l -- load transform and current slice position and angle        
     case 'l' 
         slice_name = ud_slice.processed_image_names{ud_slice.slice_num}(1:end-4);
@@ -603,27 +609,27 @@ switch key_letter
 % d -- delete current transform or most recent probe point            
     case 'd' 
         if ud.getPoint_for_transform
-%             ud.current_pointList_for_transform = zeros(0,2); set(ud.pointHands_for_transform(:), 'Visible', 'off'); 
-%             ud.pointHands_for_transform = []; ud_slice.pointList = []; set(slice_figure, 'UserData', ud_slice);
-%             disp('current transform erased');
+            % Original code - deletes all transform points
+            %ud.current_pointList_for_transform = zeros(0,2); 
+            %set(ud.pointHands_for_transform(:), 'Visible', 'off'); 
+            %ud.pointHands_for_transform = []; 
+            %ud_slice.pointList = []; 
+            %set(slice_figure, 'UserData', ud_slice);
+            %disp('current transform erased');
             
-            % Try to delete only the most recent point
+            % Delete only the most recent transform point
             ud.current_pointList_for_transform = ud.current_pointList_for_transform(1:end-1,:);
             set(ud.pointHands_for_transform(end), 'Visible', 'off');
-            ud.pointHands_for_transform = ud.pointHands_for_transform(1:end-1); 
-            ud_slice.pointList = ud_slice.pointList(1:end-1,:); 
-            set(slice_figure, 'UserData', ud_slice);
-            
-            % recolor points
+            ud.pointHands_for_transform = ud.pointHands_for_transform(1:end-1);
             set(ud.pointHands_for_transform(end), 'color', [0 .9 0]);
-%             ud.pointHands_for_transform(end+1) = plot(ud.atlasAx, clickX, clickY, 'ro', 'color', [0 .9 0],'LineWidth',2,'markers',4);    
-    
-            disp('transform point deleted');
+            ud_slice.pointList = ud_slice.pointList(1:end-1,:);
+            set(slice_figure, 'UserData', ud_slice);
+            disp('AtlasViewer transform point deleted');
             
         elseif ud.currentProbe
             ud.pointList{ud.currentProbe,1} = ud.pointList{ud.currentProbe,1}(1:end-1,:);
             ud.pointList{ud.currentProbe,2} = ud.pointList{ud.currentProbe,2}(1:end-1,:);
-            ud.pointList{ud.currentProbe,3} = ud.pointList{ud.currentProbe,3}(1:end-1,:);
+            ud.pointList{ud.currentProbe,3} = ud.pointList{ud.currentProbe,3}(:,1:end-1);
             set(ud.pointHands{ud.currentProbe, 1}(end), 'Visible', 'off'); 
             ud.pointHands{ud.currentProbe, 1} = ud.pointHands{ud.currentProbe, 1}(1:end-1);
             ud.pointHands{ud.currentProbe, 2} = ud.pointHands{ud.currentProbe, 2}(1:end-1);
@@ -993,7 +999,6 @@ if ud.probe_view_mode && ud.currentProbe
     end
     clickZ = ud.currentSlice + ud.offset_map(clickY,clickX);
     
-    
     % find the probe point closest to this clicked point
     [min_dist, point_ind] = min( sqrt(sum(([clickX clickY clickZ] - ud.pointList{ud.currentProbe}).^2,2)));
     
@@ -1008,14 +1013,17 @@ if ud.probe_view_mode && ud.currentProbe
 elseif ud.currentProbe > 0
     clickX = round(keydata.IntersectionPoint(1));
     clickY = round(keydata.IntersectionPoint(2));   
-    if ud.showOverlay; clickY = size(ud.ref,1) - clickY; end % overlay inverts Y
+    if ud.showOverlay
+        clickY = size(ud.ref,1) - clickY;
+    end % overlay inverts Y
     clickZ = ud.currentSlice + ud.offset_map(clickY,clickX);
        
     ud.pointList{ud.currentProbe,1}(end+1, :) = [clickX, clickY, clickZ];
     ud.pointList{ud.currentProbe,2}(end+1, :) = ud.slice_at_shift_start + ud.slice_shift;
     slice_name = ud_slice.processed_image_names{ud.slice_at_shift_start + ud.slice_shift}(1:end-4);
     ud.pointList{ud.currentProbe,3}{end+1} = slice_name;
-   
+    disp(['point marked  -  at image ' slice_name]);
+    disp(['imaged name added    -    ' slice_name]);
     ud.pointHands{ud.currentProbe, 1}(end+1) = scatter(ud.atlasAx, clickX, clickY, 20, 'ro', ...
                 'MarkerFaceColor', [.1 .1 .1],'MarkerEdgeColor', ud.ProbeColors(ud.currentProbe, :), ...
                 'LineWidth',2);
