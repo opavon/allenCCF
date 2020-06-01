@@ -6,14 +6,17 @@
 %% ENTER PARAMETERS AND FILE LOCATION
 
 % file location of object points
-save_folder = 'C:\Drive\Histology\brainX\processed';
+points_folder = 'D:\Dropbox (UCL - SWC)\Project_transcriptomics\analysis\PAG_registration\PAG_cells_to_register\processed';
+
+% directory to save results
+save_folder = 'D:\Dropbox (UCL - SWC)\Project_transcriptomics\analysis\PAG_registration\PAG_cells_to_register\processed\results';
 
 % directory of reference atlas files
-annotation_volume_location = 'C:\Drive\Histology\for tutorial\annotation_volume_10um_by_index.npy';
-structure_tree_location = 'C:\Drive\Histology\for tutorial\structure_tree_safe_2017.csv';
+annotation_volume_location = 'D:\PhD\GitHub\allenCCF_philip\annotation_volume_10um_by_index.npy';
+structure_tree_location = 'D:\PhD\GitHub\allenCCF_philip\structure_tree_safe_2017.csv';
 
 % name of the saved object points
-object_save_name_suffix = '';
+object_save_name_suffix = '_PAG_scRNAseq_registered_cells';
 
 % either set to 'all' or a list of indices from the clicked objects in this file, e.g. [2,3]
 objects_to_analyze = 'all';
@@ -34,9 +37,10 @@ if ~exist('av','var') || ~exist('st','var')
     st = loadStructureTree(structure_tree_location);
 end
 
-
 % load object points
-objectPoints = load(fullfile(save_folder, ['probe_points' object_save_name_suffix]));
+objectPoints = load(fullfile(points_folder, ['probe_points' object_save_name_suffix]));
+% objectPoints.pointList.pointList{1, 3} % This should output the image names of VGAT cells
+% objectPoints.pointList.pointList{2, 3} % This should output the image names of vGluT2 cells
 
 % determine which objects to analyze
 if strcmp(objects_to_analyze,'all')
@@ -59,16 +63,25 @@ bregma = allenCCFbregma(); % bregma position in reference data space
 atlas_resolution = 0.010; % mm
 
 % plot brain grid
-ProbeColors = [1 1 1; 1 .75 0;  .3 1 1; .4 .6 .2; 1 .35 .65; .7 .7 1; .65 .4 .25; .7 .95 .3; .7 0 0; .6 0 .7; 1 .6 0]; 
+% ProbeColors = [1 1 1; 1 .75 0;  .3 1 1; .4 .6 .2; 1 .35 .65; .7 .7 1; .65 .4 .25; .7 .95 .3; .7 0 0; .6 0 .7; 1 .6 0]; 
 % order of colors: {'white','gold','turquoise','fern','bubble gum','overcast sky','rawhide', 'green apple','purple','orange','red'};
+
+% to have the same VGAT/vGluT2 colors (probe 1 contains VGAT cells, probe 2 contains vGluT2 cells), do the following:
+ProbeColors = [1 .502 .502; .059 .6 .698;  .3 1 1; .4 .6 .2; 1 .35 .65; .7 .7 1; .65 .4 .25; .7 .95 .3; .7 0 0; .6 0 .7; 1 .6 0];
+
 fwireframe = plotBrainGrid([], [], [], black_brain); hold on; 
 fwireframe.InvertHardcopy = 'off';
-
-
 
 for object_num = objects
     
     selected_object = objects(object_num);
+    
+    % add the cell type to a new variable (probe 1 contains VGAT cells, probe 2 contains vGluT2 cells)
+    if object_num == 1
+        curr_cell_type = 'VGAT';
+    elseif object_num == 2
+        curr_cell_type = 'VGluT2';
+    end
         
     % get the object points for the currently analyzed object    
     if strcmp(plane,'coronal')
@@ -104,6 +117,13 @@ for object_num = objects
         roi_annotation_curr{point,1} = ann;
         roi_annotation_curr{point,2} = name;
         roi_annotation_curr{point,3} = acr;
+        
+        % add the cell type
+        roi_annotation_curr{point,4} = curr_cell_type;
+        
+        % add the image name of the current cell
+        curr_cell_id = curr_slice_id{point, 1};
+        roi_annotation_curr{point,5} = curr_cell_id;
 
     end
     
@@ -115,17 +135,40 @@ for object_num = objects
         roi_annotation = roi_annotation_curr;
         roi_location = roi_location_curr;
     end
- 
+  
     % display results in a table
     disp(['Clicked points for object ' num2str(selected_object)])
-    roi_table = table(roi_annotation_curr(:,2),roi_annotation_curr(:,3), ...
-                        roi_location_curr(:,1),roi_location_curr(:,2),roi_location_curr(:,3), roi_annotation_curr(:,1), ...
-         'VariableNames', {'name', 'acronym', 'AP_location', 'DV_location', 'ML_location', 'avIndex'});
-     disp(roi_table)
-    
+    roi_table = table(roi_annotation_curr(:,5), ...
+                      roi_annotation_curr(:,4), ...
+                      roi_annotation_curr(:,2), ...
+                      roi_annotation_curr(:,3), ...
+                      roi_location_curr(:,1), ...
+                      roi_location_curr(:,2), ...
+                      roi_location_curr(:,3), ...
+                      roi_annotation_curr(:,1), ...
+                      'VariableNames', {'cell_ID', 'cell_type', 'brain_area', 'acronym', ...
+                      'AP_location', 'DV_location', 'ML_location', 'avIndex'});
+    disp(roi_table)
 end
 
+% Save combined table with both VGAT and VGluT2 cells:
+PAG_cells_table = table([roi_annotation{1,1}(:,5); roi_annotation{2,1}(:,5)], ...
+                        [roi_annotation{1,1}(:,4); roi_annotation{2,1}(:,4)], ...
+                        [roi_annotation{1,1}(:,2); roi_annotation{2,1}(:,2)], ...
+                        [roi_annotation{1,1}(:,3); roi_annotation{2,1}(:,3)], ...
+                        [roi_location{1,1}(:,1); roi_location{2,1}(:,1)], ...
+                        [roi_location{1,1}(:,2); roi_location{2,1}(:,2)], ...
+                        [roi_location{1,1}(:,3); roi_location{2,1}(:,3)], ...
+                        [roi_annotation{1,1}(:,1); roi_annotation{2,1}(:,1)], ...
+                        'VariableNames', {'cell_ID', 'cell_type', 'brain_area', 'acronym', ...
+                        'AP_location', 'DV_location', 'ML_location', 'avIndex'});
+disp(PAG_cells_table)
+
+% Save table and results:
+save(fullfile(save_folder, 'PAG_scRNAseq_registered_cells'), 'objectPoints');
+save(fullfile(save_folder, 'objectPoints'), 'objectPoints');
+save(fullfile(save_folder, 'roi_location'), 'roi_location');
+save(fullfile(save_folder, 'roi_annotation'), 'roi_annotation');
+writetable(PAG_cells_table, fullfile(save_folder,'PAG_cells_registration_table.csv'),'Delimiter',',','QuoteStrings',true)
 
 % now, use roi_location and roi_annotation for your further analyses
-
-
