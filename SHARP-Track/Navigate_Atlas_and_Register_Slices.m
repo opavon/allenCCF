@@ -7,15 +7,15 @@
 
 
 % directory of histology
-processed_images_folder = 'C:\Drive\Histology\brainX\processed'; 
+processed_images_folder = 'D:\Dropbox (UCL - SWC)\Project_transcriptomics\analysis\PAG_registration\PAG_cells_to_register\processed'; 
 
 % name the saved probe points, to avoid overwriting another set of probes going in the same folder
-probe_save_name_suffix = ''; 
+probe_save_name_suffix = '_PAG_scRNAseq_registered_cells'; 
 
 % directory of reference atlas files
-annotation_volume_location = 'C:\Drive\Histology\annotation_volume_10um_by_index.npy';
-structure_tree_location = 'C:\Drive\Histology\structure_tree_safe_2017.csv';
-template_volume_location = 'C:\Drive\Histology\template_volume_10um.npy';
+annotation_volume_location = 'D:\PhD\GitHub\allenCCF_philip\annotation_volume_10um_by_index.npy';
+structure_tree_location = 'D:\PhD\GitHub\allenCCF_philip\structure_tree_safe_2017.csv';
+template_volume_location = 'D:\PhD\GitHub\allenCCF_philip\template_volume_10um.npy';
 
 % plane to view ('coronal', 'sagittal', 'transverse')
 plane = 'coronal';
@@ -53,14 +53,14 @@ reference_size = size(tv_plot);
 sliceBrowser(slice_figure_browser, processed_images_folder, f, reference_size);
 
 
-% % use application in Atlas Transform Viewer
-% % use this function if you have a processed_images_folder with appropriately processed .tif histology images
+% use application in Atlas Transform Viewer
+% use this function if you have a processed_images_folder with appropriately processed .tif histology images
 f = AtlasTransformBrowser(f, tv_plot, av_plot, st, slice_figure_browser, processed_images_folder, probe_save_name_suffix, plane);
 
 
 % use the simpler version, which does not interface with processed slice images
 % just run these two lines instead of the previous 5 lines of code
 % 
-%  save_location = processed_images_folder;
-%  f = allenAtlasBrowser(f, tv_plot, av_plot, st, save_location, probe_save_name_suffix, plane);
+% save_location = processed_images_folder;
+% f = allenAtlasBrowser(f, tv_plot, av_plot, st, save_location, probe_save_name_suffix, plane);
 
