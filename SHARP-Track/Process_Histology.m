@@ -8,11 +8,11 @@
 % * remember to run one cell at a time, instead of the whole script at once *
 
 % directory of histology images
-image_folder = 'C:\Drive\Histology\cfos';
+image_folder = 'D:\Dropbox (UCL - SWC)\Project_transcriptomics\analysis\PAG_registration\PAG_cells_to_register';
 
 % directory to save the processed images -- can be the same as the above image_folder
 % results will be put inside a new folder called 'processed' inside of this image_folder
-save_folder = 'C:\Drive\Histology\cfos';
+save_folder = 'D:\Dropbox (UCL - SWC)\Project_transcriptomics\analysis\PAG_registration\PAG_cells_to_register';
 
 % name of images, in order anterior to posterior or vice versa
 % once these are downsampled they will be named ['original name' '_processed.tif']
@@ -25,12 +25,12 @@ image_file_names = natsortfiles({image_file_names.name});
 image_files_are_individual_slices = true;
 
 % use images that are already at reference atlas resolution (here, 10um/pixel)
-use_already_downsampled_image = true; 
+use_already_downsampled_image = false; 
 
 % pixel size parameters: microns_per_pixel of large images in the image
 % folder (if use_already_downsampled_images is set to false);
 % microns_per_pixel_after_downsampling should typically be set to 10 to match the atlas
-microns_per_pixel = 3.233;
+microns_per_pixel = 3.125; % the resolution of the Slice_rig2 camera
 microns_per_pixel_after_downsampling = 10;
 
 
@@ -57,10 +57,6 @@ elseif strcmp(plane,'sagittal')
 elseif strcmp(plane,'transverse')
     atlas_reference_size = [1140 1320];
 end
-
-
-
-
 
 
 % finds or creates a folder location for processed images -- 
