@@ -51,6 +51,7 @@ if ud.getPoint
     clickY = round(keydata.IntersectionPoint(2));
 
     ud.pointList(end+1, :) = [clickX, ud.ref_size(1) - clickY];
+    set(ud.pointHands(:), 'color', [.7 .3 .3]); % changes color of previous click to red
     ud.pointHands(end+1) = plot(ud.sliceAx, clickX, clickY, 'ro', 'color', [0 .5 0],'linewidth',2,'markers',4);    
     
      if clickX < 100 && (ud.ref_size(1) - clickY) < 100 % if click in corner, break
@@ -83,15 +84,17 @@ elseif strcmp(keydata.Key,'rightarrow')
     end
 % d -- delete current transform points
 elseif strcmp(keydata.Key,'d') 
-%     disp('current transform points deleted')
-%     set(ud.pointHands(:), 'Visible', 'off'); 
-%     ud.pointList = [];    
+    % Original - deletes all transform points
+    %disp('current transform points deleted')
+    %set(ud.pointHands(:), 'Visible', 'off'); 
+    %ud.pointList = [];
     
     % Try to delete only most recent point
-    set(ud.pointHands(end), 'Visible', 'off'); 
-    ud.pointHands = ud.pointHands(1:end-1); 
-    ud.pointList = ud.pointList(1:end-1,:); 
-    disp('transform point deleted')
+    set(ud.pointHands(end), 'Visible', 'off');
+    ud.pointHands = ud.pointHands(1:end-1);
+    set(ud.pointHands(end), 'color', [0 .9 0]);
+    ud.pointList = ud.pointList(1:end-1,:);
+    disp('SliceViewer transform point deleted')
 % t -- transform point mode
 elseif strcmp(keydata.Key,'t')
     ud.getPoint = ~ud.getPoint;
@@ -140,3 +143,7 @@ function ud = updateSliceImage(ud)
         end       
     end
     title(['Slice Viewer -- Slice ' num2str(ud.slice_num) '/' num2str(ud.total_num_files) title_ending])    
+
+    
+    
+    
