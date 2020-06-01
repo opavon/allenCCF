@@ -6,17 +6,20 @@
 %% ENTER PARAMETERS AND FILE LOCATION
 
 % file location of object points
-save_folder = 'C:\Drive\Histology\for tutorial\Richards\processed';
+points_folder = 'D:\Dropbox (UCL - SWC)\Project_transcriptomics\analysis\PAG_registration\PAG_cells_to_register\processed';
+
+% directory to save results
+save_folder = 'D:\Dropbox (UCL - SWC)\Project_transcriptomics\analysis\PAG_registration\PAG_cells_to_register\processed\results';
 
 % directory of reference atlas files
-annotation_volume_location = 'C:\Drive\Histology\annotation_volume_10um_by_index.npy'; % from the allen inst (see readme)
-structure_tree_location = 'C:\Drive\Histology\structure_tree_safe_2017.csv'; % located in github repo
-CCF_to_FP_location =  'C:\Drive\Histology\CCF_to_FP.csv'; % located in github repo
-FP_table_location = 'C:\Drive\Histology\FP_table_Chon_2020.csv'; % located in github repo
-chon_images_loc = 'C:\Drive\Histology\Suppl_File1_Labels'; % from chon et al (supplementary data 4, https://www.nature.com/articles/s41467-019-13057-w)
+annotation_volume_location = 'D:\PhD\GitHub\allenCCF_philip\annotation_volume_10um_by_index.npy'; % from the allen inst (see readme)
+structure_tree_location = 'D:\PhD\GitHub\allenCCF_philip\structure_tree_safe_2017.csv'; % located in github repo
+CCF_to_FP_location =  'D:\PhD\GitHub\allenCCF_philip\CCF_to_FP.csv'; % located in github repo
+FP_table_location = 'D:\PhD\GitHub\allenCCF_philip\FP_table_Chon_2020.csv'; % located in github repo
+chon_images_loc = 'D:\PhD\GitHub\allenCCF_philip\Chon_et_al_Supp_Data_Labels'; % from chon et al (supplementary data 4, https://www.nature.com/articles/s41467-019-13057-w)
 
 % name of the saved object points
-object_save_name_suffix = '';
+object_save_name_suffix = '_PAG_scRNAseq_registered_cells';
 
 % either set to 'all' or a list of indices from the clicked objects in this file, e.g. [2,3]
 objects_to_analyze = 'all';
@@ -36,13 +39,16 @@ if ~exist('av','var') || ~exist('st','var')
     av = readNPY(annotation_volume_location);
     st = loadStructureTree(structure_tree_location);
 end
+
 if ~exist('CCFtoFPtable','var') || ~exist('FPtable','var')
     CCFtoFPtable = loadCCFtoFP(CCF_to_FP_location);
     FPtable = loadFPtable(FP_table_location);
 end
 
 % load object points
-objectPoints = load(fullfile(save_folder, ['probe_points' object_save_name_suffix]));
+objectPoints = load(fullfile(points_folder, ['probe_points' object_save_name_suffix]));
+% objectPoints.pointList.pointList{1, 3} % This should output the image names of VGAT cells
+% objectPoints.pointList.pointList{2, 3} % This should output the image names of vGluT2 cells
 
 % determine which objects to analyze
 if strcmp(objects_to_analyze,'all')
@@ -56,8 +62,9 @@ end
 
 % initialize cell array containing info on each clicked point
 if length(objects) > 1
-    roi_annotation = cell(length(objects),1);
-    roi_location = cell(length(objects),1);
+    roi_annotation_CCF = cell(length(objects),1);
+    roi_annotation_FP = cell(length(objects),1);
+    roi_location_CCF = cell(length(objects),1);
 end
 
 % generate needed values
@@ -65,24 +72,36 @@ bregma = allenCCFbregma(); % bregma position in reference data space
 atlas_resolution = 0.010; % mm
 
 % plot brain grid
-ProbeColors = [1 1 1; 1 .75 0;  .3 1 1; .4 .6 .2; 1 .35 .65; .7 .7 1; .65 .4 .25; .7 .95 .3; .7 0 0; .6 0 .7; 1 .6 0]; 
+% ProbeColors = [1 1 1; 1 .75 0;  .3 1 1; .4 .6 .2; 1 .35 .65; .7 .7 1; .65 .4 .25; .7 .95 .3; .7 0 0; .6 0 .7; 1 .6 0]; 
 % order of colors: {'white','gold','turquoise','fern','bubble gum','overcast sky','rawhide', 'green apple','purple','orange','red'};
+
+% to have the same VGAT/vGluT2 colors (probe 1 contains VGAT cells, probe 2 contains vGluT2 cells), do the following:
+ProbeColors = [1 .502 .502; .059 .6 .698;  .3 1 1; .4 .6 .2; 1 .35 .65; .7 .7 1; .65 .4 .25; .7 .95 .3; .7 0 0; .6 0 .7; 1 .6 0];
+
 fwireframe = plotBrainGrid([], [], [], black_brain); hold on; 
 fwireframe.InvertHardcopy = 'off';
-
-
 
 for object_num = objects
     
     selected_object = objects(object_num);
+    
+    % add the cell type to a new variable (probe 1 contains VGAT cells, probe 2 contains vGluT2 cells)
+    if object_num == 1
+        curr_cell_type = 'VGAT';
+    elseif object_num == 2
+        curr_cell_type = 'VGluT2';
+    end
         
     % get the object points for the currently analyzed object    
     if strcmp(plane,'coronal')
         curr_objectPoints = objectPoints.pointList.pointList{selected_object,1}(:, [3 2 1]);
+        curr_slice_id = objectPoints.pointList.pointList{selected_object, 3}';
     elseif strcmp(plane,'sagittal')
         curr_objectPoints = objectPoints.pointList.pointList{selected_object,1}(:, [1 2 3]);
+        curr_slice_id = objectPoints.pointList.pointList{selected_object, 3}';
     elseif strcmp(plane,'transverse')
         curr_objectPoints = objectPoints.pointList.pointList{selected_object,1}(:, [1 3 2]);
+        curr_slice_id = objectPoints.pointList.pointList{selected_object, 3}';
     end
 
     % plot points on the wire frame brain
@@ -112,7 +131,14 @@ for object_num = objects
         roi_annotation_curr{point,2} = name;
         roi_annotation_curr{point,3} = acr;
         
-        % find the annotation, name, and acronym of the current ROI pixel
+        % add the cell type
+        roi_annotation_curr{point,4} = curr_cell_type;
+        
+        % add the image name of the current cell
+        curr_cell_id = curr_slice_id{point, 1};
+        roi_annotation_curr{point,5} = curr_cell_id;
+        
+        % find the FP annotation, name, and acronym of the current ROI pixel
         [ann_FP, name_FP, acr_FP] = CCF_to_FP(curr_objectPoints(point,1), curr_objectPoints(point,2), curr_objectPoints(point,3), CCFtoFPtable, FPtable, chon_images_loc);
 
         roi_annotation_curr_FP{point,1} = ann_FP;
@@ -123,23 +149,61 @@ for object_num = objects
     
     % save results in cell array
     if length(objects) > 1
-        roi_annotation{object_num} = roi_annotation_curr;
-        roi_location{object_num} = roi_location_curr;
+        roi_annotation_CCF{object_num} = roi_annotation_curr;
+        roi_annotation_FP{object_num} = roi_annotation_curr_FP;
+        roi_location_CCF{object_num} = roi_location_curr;
     else
-        roi_annotation = roi_annotation_curr;
-        roi_location = roi_location_curr;
+        roi_annotation_CCF = roi_annotation_curr;
+        roi_annotation_FP = roi_annotation_curr_FP;
+        roi_location_CCF = roi_location_curr;
     end
- 
+  
     % display results in a table
     disp(['Clicked points for object ' num2str(selected_object)])
-    roi_table = table(roi_annotation_curr(:,2),roi_annotation_curr(:,3), roi_annotation_curr_FP(:,2),roi_annotation_curr_FP(:,3),...
-                        roi_location_curr(:,1),roi_location_curr(:,2),roi_location_curr(:,3), roi_annotation_curr(:,1), roi_annotation_curr_FP(:,1),...
-         'VariableNames', {'CCF_name', 'CCF_acronym', 'FP_name', 'FP_acronym', 'AP_location', 'DV_location', 'ML_location', 'avIndex', 'fpIndex'});
-     disp(roi_table)
+    roi_table = table(roi_annotation_curr(:,5), ...
+                      roi_annotation_curr(:,4), ...
+                      roi_annotation_curr(:,2), ...
+                      roi_annotation_curr(:,3), ...
+                      roi_annotation_curr_FP(:,2), ...
+                      roi_annotation_curr_FP(:,3), ...
+                      roi_location_curr(:,1), ...
+                      roi_location_curr(:,2), ...
+                      roi_location_curr(:,3), ...
+                      roi_annotation_curr(:,1), ...
+                      roi_annotation_curr_FP(:,1), ...
+                      'VariableNames', {'cell_ID', 'cell_type', ...
+                      'CCF_brain_area', 'CCF_acronym', ...
+                      'FP_brain_area', 'FP_acronym', ...
+                      'AP_location', 'DV_location', 'ML_location', ...
+                      'avIndex', 'fpIndex'});
+    disp(roi_table)
     
 end
 
+% Save combined table with both VGAT and VGluT2 cells:
+PAG_cells_table = table([roi_annotation_CCF{1,1}(:,5); roi_annotation_CCF{2,1}(:,5)], ...
+                        [roi_annotation_CCF{1,1}(:,4); roi_annotation_CCF{2,1}(:,4)], ...
+                        [roi_annotation_CCF{1,1}(:,2); roi_annotation_CCF{2,1}(:,2)], ...
+                        [roi_annotation_CCF{1,1}(:,3); roi_annotation_CCF{2,1}(:,3)], ...
+                        [roi_annotation_FP{1,1}(:,2); roi_annotation_FP{2,1}(:,2)], ...
+                        [roi_annotation_FP{1,1}(:,3); roi_annotation_FP{2,1}(:,3)], ...
+                        [roi_location_CCF{1,1}(:,1); roi_location_CCF{2,1}(:,1)], ...
+                        [roi_location_CCF{1,1}(:,2); roi_location_CCF{2,1}(:,2)], ...
+                        [roi_location_CCF{1,1}(:,3); roi_location_CCF{2,1}(:,3)], ...
+                        [roi_annotation_CCF{1,1}(:,1); roi_annotation_CCF{2,1}(:,1)], ...
+                        [roi_annotation_FP{1,1}(:,1); roi_annotation_FP{2,1}(:,1)], ...
+                        'VariableNames', {'cell_ID', 'cell_type', ...
+                        'CCF_brain_area', 'CCF_acronym', ...
+                        'FP_brain_area', 'FP_acronym', ...
+                        'AP_location', 'DV_location', 'ML_location', ...
+                        'avIndex', 'fpIndex'});
+disp(PAG_cells_table)
+
+% Save table and results:
+save(fullfile(save_folder, 'PAG_scRNAseq_registered_cells'), 'objectPoints'); % should be the same as ['probe_points' object_save_name_suffix]
+save(fullfile(save_folder, 'roi_location_CCF'), 'roi_location_CCF');
+save(fullfile(save_folder, 'roi_annotation_CCF'), 'roi_annotation_CCF');
+save(fullfile(save_folder, 'roi_annotation_FP'), 'roi_annotation_FP');
+writetable(PAG_cells_table, fullfile(save_folder,'PAG_cells_registration_table.csv'),'Delimiter',',','QuoteStrings',true)
 
 % now, use roi_location and roi_annotation for your further analyses
-
-
